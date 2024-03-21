@@ -15,6 +15,44 @@ const notes = (() => {
     _oscillatorTypes = ['sine', 'square', 'triangle', 'sawtooth'];
     _noteTimber = 'sine';
     _notesTable = [];
+    
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const _playNote = (noteFrequency, duration) => {
+        /*
+        //Faulty approach, makes clicking sound while starting and ending
+        oscillator = audioCtx.createOscillator();
+        oscillator.connect(audioCtx.destination);
+        oscillator.type = _noteTimber;
+        oscillator.frequency.value = noteFrequency;
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + duration);
+        */
+        
+        //Fix : Create a gain node, fade in and fade out the sound, offset the fade in and fade out time in oscillator
+        let fadeInDuration = 0.01;
+        let fadeOutDuration = 0.01;
+        
+        
+        oscillator = audioCtx.createOscillator();
+        oscillator.type = _noteTimber;
+        oscillator.frequency.setValueAtTime(noteFrequency, audioCtx.currentTime);
+
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime); // Start with gain at 0 to avoid clicks
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + fadeInDuration); // Smooth fade in
+
+        oscillator.start();
+
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime + duration); // Ensure the gain is 1 before fading out
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration + fadeOutDuration); // Smooth fade out
+        oscillator.stop(audioCtx.currentTime + duration + fadeInDuration + fadeOutDuration);
+    }
+    
     (() => {
         const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const noteAliases = {'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb'};
@@ -49,8 +87,14 @@ const notes = (() => {
     const getTimber = () => {
         return _noteTimber;
     }
-    const play = (note, duration) => {
-
+    const play = (noteToPlay, duration) => {
+        let currNote =_notesTable.find((note) => { return note.note == noteToPlay.toUpperCase() });
+        if(!currNote) {
+            logger.error(`Note ${noteToPlay} not found.`);
+            return;
+        }
+        
+        _playNote(currNote.frequency, duration);
     }
     return {
         getTable,

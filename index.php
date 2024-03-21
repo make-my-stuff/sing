@@ -10,16 +10,15 @@
             synth.triggerAttackRelease("C4", "8n");
         }
     </script>
-    <button onclick="playNote">
-        play
-    </button>
 	<script type="text/javascript" src="./player.js"></script>
-    <script type="text/javascript" src="./script.js"></script>
 </head>
 <body>
-	<h1>Hello goorm</h1>
-	<?php
-		echo "Contents here";
-	?>
+    <button id="tonePlay">
+        play
+    </button>
+    <button id="notePlay">
+        note
+    </button>
+    <script type="text/javascript" src="./script.js"></script>
 </body>
 </html>
