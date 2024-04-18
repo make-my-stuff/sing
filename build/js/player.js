@@ -1,4 +1,4 @@
-const logger = (() => {
+const LNotes = (() => {
     const log = (message) => {
         console.log(message);
     }
@@ -11,7 +11,7 @@ const logger = (() => {
     }
 })()
 
-const notes = (() => {
+const Notes = (() => {
     _oscillatorTypes = ['sine', 'square', 'triangle', 'sawtooth'];
     _noteTimber = 'sine';
     _notesTable = [];
@@ -78,7 +78,7 @@ const notes = (() => {
     const setTimber = (timber) => {
         if(!(timber in _oscillatorTypes)) {
             let possibleTimber = _oscillatorTypes.join(", ");
-            logger.error(`Invalid timber. Possible values are '${possibleTimber}'`)
+            Logger.error(`Invalid timber. Possible values are '${possibleTimber}'`)
             return;
         }
         
@@ -90,7 +90,7 @@ const notes = (() => {
     const play = (noteToPlay, duration) => {
         let currNote =_notesTable.find((note) => { return note.note == noteToPlay.toUpperCase() });
         if(!currNote) {
-            logger.error(`Note ${noteToPlay} not found.`);
+            Logger.error(`Note ${noteToPlay} not found.`);
             return;
         }
         
@@ -105,7 +105,7 @@ const notes = (() => {
 })()
 
 
-const staff = (() => {
+const Staff = (() => {
     let _tuning = ["E", "A", "D", "G", "B", "E"];
     let _tempo = 90;
     let _timeSignature = [4, 4];
@@ -120,7 +120,7 @@ const staff = (() => {
     const setTimeSignature = (timeSignature) => {
         let tsComponents = timeSignature.split("/");
         if(tsComponents.length != 2) {
-            logger.error("Time signature is not in correct format. Eg '4/4'");
+            Logger.error("Time signature is not in correct format. Eg '4/4'");
             return;
         }
         _timeSignature = tsComponents;

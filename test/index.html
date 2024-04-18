@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    </head>
+    <body>
+        <script type="text/javascript" src="/app/js/util/logger.js"></script>
+        <script type="text/javascript" src="/app/js/util/state.js"></script>
+        <script type="text/javascript" src="/app/js/util/router.js"></script>
+
+        <script type="text/javascript" src="/app/js/player.js"></script>
+        <script type="text/javascript" src="/app/js/piano.js"></script>
+
+        <script type="text/javascript" src="./lib/deep_freeze-0-0-1.js"></script>
+        <script type="text/javascript" src="./lib/expect-1-20-2.js"></script>
+
+        <script type="text/javascript">
+            function testIfSingleton() {
+                console.info("Singleton : Checking if two instances of StateManager are same")
+                let store1 = new StateManager({"fix": "fax"});
+                let store2 = new StateManager();
+                expect(store1).toBe(store2);
+            }
+
+            function stateManager(state, action) {
+
+            }
+
+            testIfSingleton();
+            console.log("All Tests Passed.")
+        </script>
+    </body>
+</html>
