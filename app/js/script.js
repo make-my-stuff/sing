@@ -28,31 +28,15 @@ const setupPiano = (elem) => {
 setupPiano();
 
 
-const play = () => {
-
-    let queue = new TimerQueue();
-    let notes = new Notes();
-    queue.add(() => { notes.play("G4", 1) }, 1000);
-    queue.add(() => { notes.play("A4", 1) }, 1000);
-    queue.add(() => { notes.play("G4", 1) }, 1000);
-    queue.add(() => { notes.play("A4", 1) }, 1000);
-    queue.add(() => { notes.play("G4", 1) }, 1000);
-    queue.add(() => { notes.play("A4", 1) }, 1000);
-    queue.add(() => { notes.play("G4", 1) }, 1000);
-    queue.add(() => { notes.play("A4", 1) }, 1000);
-    queue.start();
-}
-
-
 const staff = new Staff();
 const melodyTablature = {
     title: "Melody",
     tuning: ["E", "A", "D", "G", "B", "E"],
-    tempo: 120,
+    tempo: 60,
     timeSignature: '4/4',
     notes: [
         { 'note': 'C4', 'duration': 1},
-        { 'note': 'D4', 'duration': 1},
+        { 'note': 'D4', 'duration': 2},
         { 'note': 'E4', 'duration': 1},
         { 'note': 'F4', 'duration': 1},
         { 'note': 'G4', 'duration': 1},
@@ -71,7 +55,12 @@ const melodyTablature = {
 };
 staff.setTablature(melodyTablature);
 
-// Start executing from the first task
 document.querySelector("#playMusic").addEventListener("click", (evt) => {
     staff.play();
+});
+document.querySelector("#pauseMusic").addEventListener("click", (evt) => {
+    staff.pause();
+});
+document.querySelector("#resumeMusic").addEventListener("click", (evt) => {
+    staff.resume();
 });

@@ -8,33 +8,36 @@ const Notes = (function() {
         this.noteTimber = 'sine';
         this.notesTable = buildNotesTable();
 
-        const _playNote = (noteFrequency, duration) => {
+        const _playNote = (noteFrequency, duration, startTime) => {
+            let fadeInTime = 0.01;
+            let fadeOutTime = 0.01;
+        
             let oscillator = audioCtx.createOscillator();
             let gainNode = audioCtx.createGain();
             oscillator.type = this.noteTimber;
-            oscillator.frequency.setValueAtTime(noteFrequency, audioCtx.currentTime);
-            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-
+            oscillator.frequency.setValueAtTime(noteFrequency, startTime);
+            gainNode.gain.setValueAtTime(0, startTime);
+        
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-
-            gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.001); // Smooth fade in
-            oscillator.start();
-
-            gainNode.gain.setValueAtTime(1, audioCtx.currentTime + duration);
-            gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration + 0.001); // Smooth fade out
-            oscillator.stop(audioCtx.currentTime + duration + 0.002);
-
-            this.oscillator = oscillator; // Maintain reference if needed for stopping
+        
+            gainNode.gain.linearRampToValueAtTime(1, startTime + fadeInTime);
+            oscillator.start(startTime);
+        
+            gainNode.gain.setValueAtTime(1, startTime + duration);
+            gainNode.gain.linearRampToValueAtTime(0, startTime + duration + fadeOutTime);
+            oscillator.stop(startTime + duration + fadeInTime + fadeOutTime);
+        
+            this.oscillator = oscillator;
         };
-
-        this.play = function(noteToPlay, duration = 1) {
+        
+        this.play = function(noteToPlay, duration = 1, startTime = 0) {
             const currNote = this.notesTable.find(note => note.note === noteToPlay.toUpperCase());
             if (!currNote) {
                 console.error(`Note ${noteToPlay} not found.`);
                 return;
             }
-            _playNote(currNote.frequency, duration);
+            _playNote(currNote.frequency, duration, startTime);
         };
     }
 
@@ -71,105 +74,35 @@ const Notes = (function() {
         return this.notesTable;
     };
 
+    Notes.prototype.getAudioCtx = function() {
+        return audioCtx;
+    }
+
     return Notes;
 })();
 
-const TimerQueue = (function() {
-    function TimerQueue() {
-        this.queue = [];
-        this.isRunning = false;
-        this.done = false;
-        this.currentTaskTimeoutId = null;
-        this.timeRemaining = null;
-        this.currentTask = null;
-    }
-
-    TimerQueue.prototype.add = function(task, duration) {
-        this.queue.push({ task, duration, done: false });
-    };
-
-    TimerQueue.prototype.start = function(n = 0) {
-        if (!this.isRunning && this.queue.length > n) {
-            this.isRunning = true;
-            this.queue = this.queue.slice(n);
-            this.next();
-        }
-    };
-
-    TimerQueue.prototype.next = function() {
-        if (this.queue.length > 0 && !this.timeRemaining) {
-            this.currentTask = this.queue.shift();
-            this.executeTask(this.currentTask);
-        } else if (this.timeRemaining) {
-            this.executeTask(this.currentTask, this.timeRemaining);
-            this.timeRemaining = null;
-        }
-    };
-
-    TimerQueue.prototype.executeTask = function(task, durationOverride) {
-        var duration = durationOverride || task.duration;
-        this.currentTaskTimeoutId = setTimeout(function() {
-            task.task();
-            console.log(task);
-            task.done = true;
-            this.isRunning = false;
-            if (this.queue.length === 0) {
-                this.done = true;
-            }
-            this.next();
-        }.bind(this), duration);
-    };
-
-    TimerQueue.prototype.pause = function() {
-        if (this.isRunning && this.currentTaskTimeoutId) {
-            clearTimeout(this.currentTaskTimeoutId); // Clear the current timeout
-            this.timeRemaining = this.currentTask.duration - (Date.now() - this.currentTask.startTime);
-            this.isRunning = false;
-            this.currentTaskTimeoutId = null;
-        }
-    };
-
-    TimerQueue.prototype.resume = function() {
-        if (!this.isRunning && this.currentTask && this.timeRemaining != null) {
-            this.isRunning = true;
-            this.next();
-        }
-    };
-
-    TimerQueue.prototype.clear = function() {
-        this.queue = [];
-        this.isRunning = false;
-        this.done = false;
-        if (this.currentTaskTimeoutId) {
-            clearTimeout(this.currentTaskTimeoutId);
-        }
-        this.currentTaskTimeoutId = null;
-        this.timeRemaining = null;
-        this.currentTask = null;
-    };
-
-    TimerQueue.prototype.show = function() {
-        return this.queue;
-    }
-
-    return TimerQueue;
-})();
+const Staff = (function() {    let _tempo = 90;
+    let _tablature = { notes: [] };
+    let _timeSignature = [4, 4];
+    let _tuning = ["E", "A", "D", "G", "B", "E"];
+    let notes = new Notes();
+    let isPlaying = false;
+    let currentNoteIndex = 0;
+    let startTime = 0;
+    let startOffset = 0;
+    let audioCtx = notes.getAudioCtx();
 
 
-const Staff = (function() {
     function Staff() {
-        this._tuning = ["E", "A", "D", "G", "B", "E"];
-        this._tempo = 90;
-        this._timeSignature = [4, 4];
-        this._tablature = '';
+        this.timeouts = [];
     }
 
     Staff.prototype.setTempo = function(tempo) {
-        this._tempo = tempo;
+        _tempo = tempo;
     };
 
     Staff.prototype.getTempo = function() {
-        return this._tempo;
+        return _tempo;
     };
 
     Staff.prototype.setTimeSignature = function(timeSignature) {
@@ -178,19 +111,19 @@ const Staff = (function() {
             console.error("Time signature is not in correct format. Eg '4/4'");
             return;
         }
-        this._timeSignature = tsComponents.map(Number);
+        _timeSignature = tsComponents.map(Number);
     };
 
     Staff.prototype.getTimeSignature = function() {
-        return this._timeSignature.join('/');
+        return _timeSignature.join('/');
     };
 
     Staff.prototype.setTuning = function(tuning) {
-        this._tuning = tuning;
+        _tuning = tuning;
     }
 
     Staff.prototype.getTuning = function() {
-        return this._tuning;
+        return _tuning;
     }
 
     Staff.prototype.setTablature = function(tablature) {
@@ -204,31 +137,63 @@ const Staff = (function() {
             this.setTuning(tablature.tuning);
         }
 
-        this._tablature = tablature;
+        _tablature = tablature;
     };
 
     Staff.prototype.getTablature = function() {
-        return this._tablature;
+        return _tablature;
     };
 
     Staff.prototype.play = function() {
-        let notes = new Notes();
-        let queue = new TimerQueue();
-        let tablature = this.getTablature();
-
-        let time = 0;
-        tablature.notes.forEach((noteInfo, index) => {
-            queue.add(() => { notes.play(noteInfo.note, noteInfo.duration) }, noteInfo.duration * 1000);
-            console.log(noteInfo.note, noteInfo.duration, noteInfo.duration * 1000);
-            //time += noteInfo.duration * 1000;
-        });
-        console.log(queue.show());
-        queue.start();
+        if (!isPlaying) {
+            isPlaying = true;
+            startTime = audioCtx.currentTime; // Ensure this is reset on each play
+            let currentTime = audioCtx.currentTime;
+            const beatDuration = 60 / _tempo;
+    
+            this.timeouts.forEach(clearTimeout); // Clear existing timeouts before setting new ones
+            this.timeouts = [];
+    
+            for (let i = currentNoteIndex; i < _tablature.notes.length; i++) {
+                const noteEntry = _tablature.notes[i];
+                const { note, duration } = noteEntry;
+                let noteStartTime = startTime + (i - currentNoteIndex) * beatDuration + startOffset;
+    
+                let timeoutId = setTimeout(() => {
+                    notes.play(note, duration * beatDuration, noteStartTime);
+                }, (noteStartTime - currentTime) * 1000);
+                this.timeouts.push(timeoutId);
+    
+                if (i === _tablature.notes.length - 1) {
+                    let endTimeoutId = setTimeout(() => {
+                        isPlaying = false;
+                        currentNoteIndex = 0;
+                        startOffset = 0;
+                    }, (noteStartTime + duration * beatDuration - currentTime) * 1000);
+                    this.timeouts.push(endTimeoutId);
+                }
+            }
+        }
     };
 
     Staff.prototype.pause = function() {
-        // Implementation needed
+        if (isPlaying) {
+            this.timeouts.forEach(clearTimeout);
+            this.timeouts = [];
+            isPlaying = false;
+            let elapsedTime = audioCtx.currentTime - startTime;
+            startOffset += elapsedTime;
+            currentNoteIndex += Math.floor(startOffset / (60 / _tempo));
+            startOffset %= (60 / _tempo);
+        }
     };
+
+    Staff.prototype.resume = function() {
+        if (!isPlaying) {
+            startTime = audioCtx.currentTime - startOffset;
+            this.play();
+        }
+    }
 
     Staff.prototype.stop = function() {
         this.goto(0);
@@ -238,8 +203,17 @@ const Staff = (function() {
         // Implementation needed
     };
 
-    Staff.prototype.goto = function(note) {
-        // Implementation needed
+    Staff.prototype.goto = function(noteIndex) {
+        if (noteIndex < 0 || noteIndex >= _tablature.notes.length) {
+            console.error("Invalid note index.");
+            return;
+        }
+        this.pause();
+        currentNoteIndex = noteIndex;
+        startOffset = 0;
+        if (isPlaying) {
+            this.play();
+        }
     };
 
     return Staff;
