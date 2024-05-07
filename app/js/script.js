@@ -36,7 +36,7 @@ const melodyTablature = {
     timeSignature: '4/4',
     notes: [
         { 'note': 'C4', 'duration': 1},
-        { 'note': 'D4', 'duration': 2},
+        { 'note': 'D4', 'duration': 1},
         { 'note': 'E4', 'duration': 1},
         { 'note': 'F4', 'duration': 1},
         { 'note': 'G4', 'duration': 1},

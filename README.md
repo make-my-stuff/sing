@@ -62,3 +62,9 @@ Tools
 - Write function signature with empty body
 - Write tests that completely spec out the function (be it side effect, types and range of arguments, idempotency)
 - Implement spec/test one by one
+
+
+
+## Styling
+- SMACSS : Base, Layout, Module, State, Theme
+- BEM : .block__element--modifier
